@@ -1,0 +1,53 @@
+
+!pip install pybullet
+
+import pybullet as p
+import pybullet_data
+import time
+
+physicsClient = p.connect(p.GUI) 
+p.setAdditionalSearchPath(pybullet_data.getDataPath()) 
+
+p.setGravity(0, 0, -9.8)
+plane_id = p.loadURDF("plane.urdf")
+robot_id = p.loadURDF("kuka_iiwa/model.urdf", useFixedBase=True)
+
+cube_start_pos = [0.7, 0, 0.2]
+cube_start_orientation = p.getQuaternionFromEuler([0, 0, 0])
+cube_id = p.loadURDF("cube.urdf", cube_start_pos, cube_start_orientation)
+
+target_pos = [0.7, 0.3, 0.2]
+
+num_joints = p.getNumJoints(robot_id)
+print(f"Number of Joints: {num_joints}")
+
+def move_arm_to_position(position, orientation):
+    joint_positions = p.calculateInverseKinematics(robot_id, num_joints - 1, position, orientation)
+    for joint_index in range(num_joints):
+        p.setJointMotorControl2(robot_id, joint_index, p.POSITION_CONTROL, joint_positions[joint_index])
+    for _ in range(100):  
+        p.stepSimulation()
+        time.sleep(0.01)
+
+def operate_gripper(action="close"):
+    print(f"Gripper operation: {action}")
+    time.sleep(0.5)
+
+print("Picking up the object...")
+pick_position = [0.7, 0, 0.1]
+pick_orientation = p.getQuaternionFromEuler([0, 0, 0])
+move_arm_to_position(pick_position, pick_orientation)
+operate_gripper("close")
+
+print("Placing the object...")
+place_position = target_pos
+place_orientation = p.getQuaternionFromEuler([0, 0, 0])
+move_arm_to_position(place_position, place_orientation)
+operate_gripper("open")
+
+print("Returning to home position...")
+home_position = [0.5, 0, 0.2]
+home_orientation = p.getQuaternionFromEuler([0, 0, 0])
+move_arm_to_position(home_position, home_orientation)
+
+p.disconnect()
